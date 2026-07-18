@@ -1,0 +1,88 @@
+function onOpen() {
+  //Add a menu for the Rendezvous options
+  var ss = SpreadsheetApp.getActiveSpreadsheet(),
+     options = [
+      {name:"Make Staff Certificates From the Current Tab", functionName:"myFunction"},
+      {name:"Video Tutorial", functionName:"help"},
+     ];
+ ss.addMenu("Certificate Maker", options);
+}
+
+//https://drive.google.com/file/d/1ON7NVENdN45I_YjqZs5-Ci-npbuoutK_/view?usp=sharing
+function help() {
+var html = HtmlService.createHtmlOutputFromFile('Page')
+      .setWidth(800)
+      .setHeight(600);
+  SpreadsheetApp.getUi() // Or DocumentApp or SlidesApp or FormApp.
+      .showModalDialog(html, 'Help Page');
+}
+
+function myFunction() {
+ //Getting the info from the import tab
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var e = sheet.getDataRange().getValues();
+
+
+  // ID of spreadsheet to add to: 1oGN7Q-t492AGuVFR8nsxQ26IXjq_qBWTEB1TLTsQ8I8
+ for (var i = 1; i < e.length; i++) {  
+ Logger.log(e[i][1]);
+  var email = e[i][1].toString().toLowerCase(); //This puts the users email address into a variable
+  var name = e[i][0];
+  var event = e[i][2];
+  var time = e[i][3];
+  var date1 = e[i][4];
+ // var date = date1;
+  var certif = e[i][5];
+  var month = date1.getMonth() + 1;
+  var date = month + "/" + date1.getDate() + "/" + date1.getFullYear();
+  var title = name + " " + event + " Certificate on " + date; //Creates the title for the new document using the users email as part of the titel
+  var doc = DriveApp.getFileById("1Nu0Dl697l32MVeB8J7eKW1tSPuG0gsvb62kB6SY_Rfk"); //getting the template document
+  
+  var parentFolder = DriveApp.getFolderById('1IgpL1XvymgCl-MjhNU3ukvWcGoXFZUBK');
+  var childFolder = parentFolder.getFolders();
+  var targetFolder = 0;
+  
+  while (childFolder.hasNext() && targetFolder == 0) {
+   var folder = childFolder.next();
+    var fname = folder.getName();
+   if (fname.toString().toLowerCase() == email) {
+    targetFolder = DriveApp.getFolderById(folder.getId());
+   } //end if
+  } //end while
+  
+  if (targetFolder == 0) {
+   var targetFolder = DriveApp.getFolderById('1IgpL1XvymgCl-MjhNU3ukvWcGoXFZUBK').createFolder(email);
+   // Grants Editor rights to the email address
+   targetFolder.addEditor(email);
+} // end if targetfolder -- 0
+  
+  
+  var newdoc = doc.makeCopy(title, targetFolder); //create the document
+  var num = newdoc.getId(); //get the ID of the new document
+  var final = DocumentApp.openById(num); //open the new document for editting
+  var body = final.getBody(); //get the body of the document
+ 
+  body.replaceText('<<Time>>', time);   //replace the values with the responses
+  body.replaceText('<<Event>>', event);   //replace the values with the responses
+  body.replaceText('<<Staff>>', name);   //replace the values with the responses
+  body.replaceText('<<Date>>', date);   //replace the values with the responses
+ 
+ final.saveAndClose();   //save and close the document with our changes
+ //final.addViewer(email);
+ //final.addEditor(email);
+  //email the person the link to the new Mad Libs
+  MailApp.sendEmail (email, title, "To access your certificate please use this link: " + newdoc.getUrl(), {noReply: true});
+  
+  Logger.log(email);
+  
+ /* // copy info to the master sheet
+ if ( certif != 'No') {
+  var ssDB = SpreadsheetApp.openById("1S_JkxEDJoNA7JGzdWdvk0SWZU32x45GXB-zeoDxb7tg").getSheetByName("PD");
+  var lastRow = ssDB.getDataRange().getValues().length ;
+  var range = ssDB.getRange(lastRow+1, 1, 1, 4);
+  var values = [[email, time, event,date]];
+  range.setValues(values);
+ } //end if*/
+ } //end for loop  ar i = 1; i < e.length; i++
+} // end myfunction
