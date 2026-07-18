@@ -1,0 +1,73 @@
+function onOpen() {
+  //Add a menu for the merge options
+  var ss = SpreadsheetApp.getActiveSpreadsheet(),
+     options = [
+      {name:"Make Login Letters", functionName:"startLetter"},
+      
+     ];
+ ss.addMenu("Login Letters", options);
+}
+
+function startLetter() 
+{
+var ui = SpreadsheetApp.getUi();
+var result = ui.prompt("Please enter your the rows you want (#-#):");
+
+createLetter(result.getResponseText());
+
+}
+
+function createLetter(result)
+{
+  Logger.log(result);
+  var range = result.split("-");
+  var i;
+
+//get the active sheet
+var ss = SpreadsheetApp.getActiveSpreadsheet();
+var sheet = ss.getActiveSheet();
+var info = sheet.getDataRange().getValues();
+const date = Utilities.formatDate(new Date(), "GMT+1", "MM/dd/yyyy");
+
+//Document copy and paste
+  var title = info[range[0]-1][0] + " Logins and Info";
+  var doc = DriveApp.getFileById("1F3qMjzwwOeEpi9u4h9cAgnF-GsE6dY8E9ec_w-F1qJI"); //getting the template document
+  var newdoc = doc.makeCopy(title); //create the document
+  var num = newdoc.getId(); //get the ID of the new document
+  var final = DocumentApp.openById(num); //open the new document for editting
+  var body = final.getBody(); //get the body of the document
+  var pars = final.getParagraphs();
+
+  //body.insertPageBreak
+  for( var i in pars ) //loop to keep a copy of the original paragraphs
+   pars[i] = pars[i].copy();
+
+  for(i=range[0]-1; i < range[1]; i++)
+  {
+    body.replaceText('<<name>>', info[i][0]);
+    body.replaceText('<<date>>', date);
+    body.replaceText('<<email>>', info[i][4]);
+    body.replaceText('<<tpw>>', info[i][6]);
+    body.replaceText('<<comps>>', info[i][11]);
+    body.replaceText('<<chargers>>', info[i][14]);
+    body.replaceText('<<cases>>', info[i][15]);
+    body.replaceText('<<phones>>', info[i][16]);
+    body.replaceText('<<sun>>', info[i][5]);
+    body.replaceText('<<spw>>', info[i][6]);
+    
+    if (i < range[1]-1) 
+    {
+     final.appendPageBreak();
+    
+    for (var j = 0; j < pars.length; ++j)
+      final.appendParagraph(pars[j].copy());
+    }
+  }
+ 
+  //body = finalbody;
+  final.saveAndClose();
+
+var user = Session.getActiveUser().getEmail();
+MailApp.sendEmail (user, title, newdoc.getUrl(), {noReply: true});
+
+}
