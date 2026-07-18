@@ -1,0 +1,91 @@
+function onFormSubmit(e) {
+  const templateId = '1GONt64sNlvgKT4g07q3qnVMpxucJcPi8HAUqDyB6Rhs'; 
+  const candidateName = e.values[5];
+  
+  const templateFile = DriveApp.getFileById(templateId);
+  const copyName = `Hiring Form - ${candidateName}`;
+  const copy = templateFile.makeCopy(copyName);
+  const doc = DocumentApp.openById(copy.getId());
+  const body = doc.getBody();
+
+  // --- CHECKBOX LOGIC ---
+  // We look at the string in e.values[30] to see if it contains specific text
+  const checklistData = e.values[30] || "";
+  
+  // Helper function: if the text is found in the checklist string, return "X", else " "
+  const check = (itemText) => checklistData.includes(itemText) ? "X" : " ";
+
+  const mapping = {
+    "{{Position}}": e.values[1],
+    "{{Today Date}}": e.values[2],
+    "{{Employ Date}}": e.values[3],
+    "{{Replace}}": e.values[4],
+    "{{Employ Name}}": candidateName,
+    "{{Employ Address}}": e.values[6],
+    "{{School Attend}}": e.values[7],
+    "{{Degree Award}}": e.values[8],
+    "{{Major}}": e.values[9],
+    "{{Previous Employer}}": e.values[10],
+    "{{Number Years}}": e.values[11],
+    "{{Certification}}": e.values[12],
+    "{{Cert State}}": e.values[13],
+    "{{Cert Expiration}}": e.values[14],
+    "{{Step}}": e.values[37],
+    "{{Years Exp}}": e.values[34],
+    "{{Salary-Hourly}}": e.values[35],
+    "{{Degree Level}}": e.values[16],
+    "{{Fund Source}}": e.values[36],
+    "{{Fingerprint}}": e.values[20],
+    "{{Posting Date}}": e.values[22],
+    "{{Number Candidates}}": e.values[23],
+    "{{Number Interviewed}}": e.values[24],
+    "{{Committee}}": e.values[25],
+    "{{Reference}}": e.values[26],
+    "{{Result}}": e.values[27],
+    "{{Committee Date}}": e.values[28],
+    "{{Three Reasons}}": e.values[29],
+
+    // --- MAPPING THE CHECKBOXES ---
+    // This matches the {{Tags}} in your "New Hire Form Template"
+    "{{Check Letter}}": check("Letter of Application"),
+    "{{Check App}}": check("Completed and Signed Application"),
+    "{{Check Ref}}": check("3 reference letters"),
+    "{{Check Tran}}": check("Official Transcript"),
+    "{{Check Cert}}": check("Copy of Certification"),
+    "{{Check CHRC}}": check("Proof of CHRC"),
+    "{{Check Call}}": check("References called")
+  };
+
+  for (let placeholder in mapping) {
+    let replacementValue = mapping[placeholder] ? mapping[placeholder].toString() : " ";
+    body.replaceText(placeholder, replacementValue);
+  }
+
+  doc.saveAndClose();
+
+//Email function to email all users in Misc tab
+
+const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Misc");
+  const url = doc.getUrl();
+  
+  // Get all data from column B (starting row 2 to skip header)
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return; // Exit if no emails found
+  
+  const emailData = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  
+  const subject = candidateName + " Hiring Information Form";
+  const message = "Hello,\n\nPlease find the link to the RSU #74 Hiring Information Form responses below:\n\n" + url;
+
+MailApp.sendEmail(e.values[38], subject, message, { noReply: true });
+
+  emailData.forEach(row => {
+    let email = row[0];
+    if (email && email.toString().includes("@")) {
+      MailApp.sendEmail(email, subject, message, { noReply: true });
+    }
+  });
+ 
+
+}
